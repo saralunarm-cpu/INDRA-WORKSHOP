@@ -1,196 +1,95 @@
-// Indra — Vercel serverless function
-// Lee la hoja de respuestas del Google Form (publicada como CSV),
-// la combina con los miembros fundadores y devuelve los perfiles en JSON.
-// La página calcula los matches a partir de estos perfiles.
+// Indra — lee la hoja del Google Form (CSV publicado) y devuelve Person[]
+// en el formato del diseño (categoryId por área). Incluye fundadores.
 
 const SHEET_CSV_URL =
   process.env.SHEET_CSV_URL ||
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vQDz1-fwRZMpPLP3fZD2tIat6yruu6xfcFlNCDUplqYwbRSOTCnRRY_syQrpYtza3LU2gRtvbZtPxTM/pub?output=csv";
 
-// ---- Categorías canónicas (deben coincidir con las del formulario y la página) ----
-const CANON = [
-  "Idioma / Alemán", "Comida", "Movilidad", "Video / Foto / Media", "Jardín",
-  "Comunidad", "Salud", "Trámites", "Tecnología", "Vivienda y alojamiento",
-  "Empleo y trabajo", "Educación y clases", "Familia y niñez", "Ropa y objetos",
-  "Legal y migración", "Otro"
-];
-
-function norm(s) {
-  return (s == null ? "" : String(s))
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")
-    .toLowerCase().replace(/\s+/g, " ").trim();
-}
-const CANON_NORM = CANON.map(norm);
-function canonCat(s) {
-  const n = norm(s);
-  const i = CANON_NORM.indexOf(n);
-  if (i >= 0) return CANON[i];
-  if (n.includes("otro")) return "Otro";
-  return String(s).trim();
-}
-function splitCats(cell) {
-  if (!cell) return [];
-  const out = [];
-  String(cell).split(/[,;]+/).forEach(function (x) {
-    const t = x.trim();
-    if (t) { const c = canonCat(t); if (out.indexOf(c) < 0) out.push(c); }
-  });
+// label del formulario -> id de categoría del diseño
+const LABEL2ID = {
+  "idioma / aleman": "idioma", "comida": "comida", "movilidad": "movilidad",
+  "video / foto / media": "media", "jardin": "jardin", "comunidad": "comunidad",
+  "salud": "salud", "tramites": "tramites", "tecnologia": "tecnologia",
+  "vivienda y alojamiento": "vivienda", "empleo y trabajo": "empleo",
+  "educacion y clases": "educacion", "familia y ninez": "familia",
+  "ropa y objetos": "ropa", "legal y migracion": "legal"
+};
+function norm(s){return (s==null?"":String(s)).normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/\s+/g," ").trim();}
+function toId(label){ return LABEL2ID[norm(label)] || null; }
+function splitCats(cell){
+  if(!cell) return [];
+  const out=[];
+  String(cell).split(/[,;]+/).forEach(function(x){ const id=toId(x.trim()); if(id && out.indexOf(id)<0) out.push(id); });
   return out;
 }
+function initialOf(name){ const t=String(name||"").trim(); return (t?t[0]:"?").toUpperCase(); }
+function slug(s){ return norm(s).replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") || "p"; }
 
-// ---- Parser CSV robusto (maneja comillas y saltos de línea internos) ----
-function parseCSV(text) {
-  const rows = [];
-  let row = [], field = "", i = 0, inQ = false;
-  while (i < text.length) {
-    const c = text[i];
-    if (inQ) {
-      if (c === '"') {
-        if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
-        inQ = false; i++; continue;
-      }
-      field += c; i++; continue;
-    } else {
-      if (c === '"') { inQ = true; i++; continue; }
-      if (c === ",") { row.push(field); field = ""; i++; continue; }
-      if (c === "\r") { i++; continue; }
-      if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; i++; continue; }
-      field += c; i++; continue;
-    }
+function parseCSV(text){
+  const rows=[]; let row=[],field="",i=0,q=false;
+  while(i<text.length){ const c=text[i];
+    if(q){ if(c=='"'){ if(text[i+1]=='"'){field+='"';i+=2;continue;} q=false;i++;continue;} field+=c;i++;continue; }
+    if(c=='"'){q=true;i++;continue;}
+    if(c==','){row.push(field);field="";i++;continue;}
+    if(c=='\r'){i++;continue;}
+    if(c=='\n'){row.push(field);rows.push(row);row=[];field="";i++;continue;}
+    field+=c;i++;
   }
-  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+  if(field.length||row.length){row.push(field);rows.push(row);}
   return rows;
 }
-
-// ---- Localiza columnas por palabras clave del encabezado ----
-function mapColumns(header) {
-  const H = header.map(norm);
-  function find(pred) { for (let i = 0; i < H.length; i++) if (pred(H[i])) return i; return -1; }
+function mapCols(header){
+  const H=header.map(norm); const f=p=>{for(let i=0;i<H.length;i++)if(p(H[i]))return i;return -1;};
   return {
-    nombre:      find(h => h.includes("nombre")),
-    correo:      find(h => h.includes("correo") || h.includes("email") || h.includes("mail")),
-    bio:         find(h => h.includes("bio") || h.includes("perfil")),
-    residencia:  find(h => h.includes("residencia") || h.includes("lugar")),
-    ofreceTexto: find(h => h.includes("ofrecer") || (h.includes("puedes dar"))),
-    ofreceCats:  find(h => h.includes("categoria") && h.includes("puedes")),
-    recibeTexto: find(h => h.includes("recibir") || h.includes("ayudarte")),
-    recibeCats:  find(h => h.includes("categoria") && (h.includes("necesitas") || h.includes("recibir")))
+    nombre:f(h=>h.includes("nombre")), correo:f(h=>h.includes("correo")||h.includes("mail")),
+    bio:f(h=>h.includes("bio")||h.includes("perfil")), ciudad:f(h=>h.includes("residencia")||h.includes("lugar")),
+    ofreceTxt:f(h=>h.includes("ofrecer")||h.includes("puedes dar")),
+    ofreceCats:f(h=>h.includes("categoria")&&h.includes("puedes")),
+    recibeCats:f(h=>h.includes("categoria")&&(h.includes("necesitas")||h.includes("recibir")))
   };
 }
 
-// ---- Miembros fundadores (precargados) ----
 const SEEDS = [
-  { name: "Paul", email: "schwarzpail.paul@googlemail.com", residencia: "Berlin",
-    bio: "Construcción de casas, ingeniería civil y trabajo físico.",
-    offerText: "Construcción, ingeniería civil, problemas estructurales, licencia y carro, cocina, alemán",
-    offerCats: ["Movilidad", "Comida", "Idioma / Alemán", "Vivienda y alojamiento", "Empleo y trabajo"],
-    needText: "Comida y recetas", needCats: ["Comida"] },
-  { name: "Marita", email: "mradajewshi@googlemail.com", residencia: "Berlin",
-    bio: "Jardín, traducción y gramática de alemán y español.",
-    offerText: "Jardín, gramática de alemán y español, traducción, carro y conducción",
-    offerCats: ["Jardín", "Idioma / Alemán", "Movilidad"],
-    needText: "Computación, IA y ayuda en tecnología", needCats: ["Tecnología"] },
-  { name: "Marilyn", email: "marilyn@masterpeace.org", residencia: "Berlin",
-    bio: "Conexiones de comunidades y artistas, arte terapia y radio digital.",
-    offerText: "Conexiones y base de contactos, movimiento y arte terapia, apoyo logístico, arepas, karaoke, estudio de arte y música, bicicleta, radio digital",
-    offerCats: ["Comunidad", "Comida", "Video / Foto / Media", "Educación y clases", "Movilidad"],
-    needText: "Logística, fotografía y video, comunicación y media, carros, alguien que maneje, talleres de arte, jardinería",
-    needCats: ["Video / Foto / Media", "Movilidad", "Jardín", "Educación y clases"] },
-  { name: "Rebeca", email: "Rebecca.desantana@gmail.com", residencia: "Berlin",
-    bio: "Videos y edición, comida de Brasil, croché y asesoría en burocracia.",
-    offerText: "Videos y edición, enseñar y dar comida de Brasil, croché-tejido, asesoría en administración y burocracia",
-    offerCats: ["Video / Foto / Media", "Comida", "Ropa y objetos", "Trámites"],
-    needText: "Cómo buscar trabajo y portafolio, trámites burocráticos, financiero, postular a la ayuda social, alemán",
-    needCats: ["Empleo y trabajo", "Trámites", "Idioma / Alemán"] },
-  { name: "Dolly", email: "berlin@casalatinoamericana.de", residencia: "Berlin",
-    bio: "Sopita y café, vida alemana, visas y organizaciones.",
-    offerText: "Sopita y café, libros, vida alemana, visas, organizaciones",
-    offerCats: ["Comida", "Idioma / Alemán", "Legal y migración", "Comunidad"],
-    needText: "Participación y creación de comunidad, videos, fotos y medios sociales",
-    needCats: ["Comunidad", "Video / Foto / Media"] },
-  { name: "Magali", email: "maganavarrete8@gmail.com", residencia: "Berlin",
-    bio: "Paz y no violencia, autoconocimiento y nuevo humanismo.",
-    offerText: "Paz y no violencia, autoconocimiento, nuevo humanismo",
-    offerCats: ["Comunidad"],
-    needText: "Nuevas redes, nuevas tecnologías, voluntarios, choferes",
-    needCats: ["Tecnología", "Movilidad", "Comunidad"] },
-  { name: "Melisa", email: "Alisongomezm01@gmail.com", residencia: "Berlin",
-    bio: "Contacto en redes de médicos y comunidad latina.",
-    offerText: "Contacto en redes de médicos, comunidad latina",
-    offerCats: ["Salud", "Comunidad"],
-    needText: "Espacios de dispersión y salud latina",
-    needCats: ["Salud", "Comunidad"] },
-  { name: "Alfonso", email: "Intercambiojusto@yahoo.es", residencia: "Berlin",
-    bio: "Procesos de organización, cocina y medio ambiente.",
-    offerText: "Procesos de organización, cocina, medio ambiente",
-    offerCats: ["Comunidad", "Comida", "Jardín"],
-    needText: "Alemán y asesoría médica",
-    needCats: ["Idioma / Alemán", "Salud"] }
+  {id:"paul",name:"Paul",city:"Berlín",isFounder:true,accent:"movilidad",offers:["movilidad","comida","idioma","vivienda","empleo"],offerDetail:"Construcción, ingeniería civil, licencia y carro, cocina, alemán",needs:["comida"],bio:"Construcción de casas, ingeniería civil y trabajo físico.",email:"schwarzpail.paul@googlemail.com"},
+  {id:"marita",name:"Marita",city:"Berlín",isFounder:true,accent:"jardin",offers:["jardin","idioma","movilidad"],offerDetail:"Jardín, gramática de alemán y español, traducción, conducción",needs:["tecnologia"],bio:"Jardín, traducción y gramática de alemán y español.",email:"mradajewshi@googlemail.com"},
+  {id:"marilyn",name:"Marilyn",city:"Berlín",isFounder:true,accent:"comunidad",offers:["comunidad","comida","media","educacion","movilidad"],offerDetail:"Conexiones y contactos, arte terapia, arepas, karaoke, radio digital",needs:["media","movilidad","jardin","educacion"],bio:"Conexiones de comunidades y artistas, arte terapia y radio digital.",email:"marilyn@masterpeace.org"},
+  {id:"rebeca",name:"Rebeca",city:"Berlín",isFounder:true,accent:"media",offers:["media","comida","ropa","tramites"],offerDetail:"Videos y edición, comida de Brasil, croché, asesoría en burocracia",needs:["empleo","tramites","idioma"],bio:"Videos y edición, comida de Brasil, croché y burocracia.",email:"Rebecca.desantana@gmail.com"},
+  {id:"dolly",name:"Dolly",city:"Berlín",isFounder:true,accent:"comida",offers:["comida","idioma","legal","comunidad"],offerDetail:"Sopita y café, libros, vida alemana, visas, organizaciones",needs:["comunidad","media"],bio:"Sopita y café, vida alemana, visas y organizaciones.",email:"berlin@casalatinoamericana.de"},
+  {id:"magali",name:"Magali",city:"Berlín",isFounder:true,accent:"comunidad",offers:["comunidad"],offerDetail:"Paz y no violencia, autoconocimiento, nuevo humanismo",needs:["tecnologia","movilidad","comunidad"],bio:"Paz y no violencia, autoconocimiento y nuevo humanismo.",email:"maganavarrete8@gmail.com"},
+  {id:"melisa",name:"Melisa",city:"Berlín",isFounder:true,accent:"salud",offers:["salud","comunidad"],offerDetail:"Contacto en redes de médicos, comunidad latina",needs:["salud","comunidad"],bio:"Contacto en redes de médicos y comunidad latina.",email:"Alisongomezm01@gmail.com"},
+  {id:"alfonso",name:"Alfonso",city:"Berlín",isFounder:true,accent:"comunidad",offers:["comunidad","comida","jardin"],offerDetail:"Procesos de organización, cocina, medio ambiente",needs:["idioma","salud"],bio:"Procesos de organización, cocina y medio ambiente.",email:"Intercambiojusto@yahoo.es"}
 ];
 
-// ---- Construye la lista de perfiles a partir del CSV + fundadores ----
-function buildProfiles(csvText) {
-  const rows = parseCSV(csvText).filter(r => r.some(c => (c || "").trim() !== ""));
-  const out = [];
-  if (rows.length > 1) {
-    const col = mapColumns(rows[0]);
-    for (let r = 1; r < rows.length; r++) {
-      const row = rows[r];
-      const get = i => (i >= 0 && i < row.length ? String(row[i] || "").trim() : "");
-      const name = get(col.nombre);
-      if (!name) continue;
-      out.push({
-        name: name,
-        email: get(col.correo),
-        bio: get(col.bio),
-        residencia: get(col.residencia),
-        offerText: get(col.ofreceTexto),
-        offerCats: splitCats(get(col.ofreceCats)),
-        needText: get(col.recibeTexto),
-        needCats: splitCats(get(col.recibeCats)),
-        source: "form"
-      });
+function buildPeople(csv){
+  const rows=parseCSV(csv).filter(r=>r.some(c=>(c||"").trim()!==""));
+  const form=[];
+  if(rows.length>1){
+    const col=mapCols(rows[0]);
+    for(let r=1;r<rows.length;r++){
+      const row=rows[r]; const g=i=>(i>=0&&i<row.length?String(row[i]||"").trim():"");
+      const name=g(col.nombre); if(!name) continue;
+      const offers=splitCats(g(col.ofreceCats)); const needs=splitCats(g(col.recibeCats));
+      form.push({ id:slug(name)+"-"+r, name, city:g(col.ciudad)||"Berlín", isFounder:false,
+        accent: offers[0]||"comunidad", offers, offerDetail:g(col.ofreceTxt),
+        needs, bio:g(col.bio), email:g(col.correo), initial:initialOf(name), source:"form" });
     }
   }
-
-  // Combinar con fundadores: la respuesta del formulario gana si coincide el correo/nombre
-  const seeds = SEEDS.map(s => Object.assign({ source: "fundador" }, s,
-    { offerText: s.offerText, needText: s.needText }));
-  const byKey = new Map();
-  const keyOf = p => (p.email && p.email.trim() ? "e:" + norm(p.email) : "n:" + norm(p.name));
-  seeds.forEach(p => byKey.set(keyOf(p), p));
-  out.forEach(p => byKey.set(keyOf(p), p)); // form overrides seed
-  return Array.from(byKey.values());
+  const map=new Map();
+  const key=p=>(p.email&&p.email.trim()?"e:"+norm(p.email):"n:"+norm(p.name));
+  SEEDS.forEach(p=>map.set(key(p), Object.assign({initial:initialOf(p.name),source:"fundador"},p)));
+  form.forEach(p=>map.set(key(p), p));
+  return Array.from(map.values());
 }
 
-async function fetchCSV(url) {
-  const res = await fetch(url, { redirect: "follow", headers: { "User-Agent": "IndraBot/1.0" } });
-  if (!res.ok) throw new Error("HTTP " + res.status);
-  return await res.text();
-}
-
-module.exports = async function handler(req, res) {
-  res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=120");
-  let profiles, source = "live", error = null;
-  try {
-    const csv = await fetchCSV(SHEET_CSV_URL);
-    profiles = buildProfiles(csv);
-  } catch (e) {
-    error = String(e && e.message || e);
-    source = "seeds-only";
-    profiles = SEEDS.map(s => Object.assign({ source: "fundador" }, s));
-  }
-  res.status(200).json({
-    updatedAt: new Date().toISOString(),
-    count: profiles.length,
-    source: source,
-    error: error,
-    categories: CANON,
-    profiles: profiles
-  });
+module.exports = async function handler(req,res){
+  res.setHeader("Cache-Control","s-maxage=60, stale-while-revalidate=120");
+  let people, source="live", error=null;
+  try{
+    const r=await fetch(SHEET_CSV_URL,{redirect:"follow"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    people=buildPeople(await r.text());
+  }catch(e){ error=String(e&&e.message||e); source="seeds-only";
+    people=SEEDS.map(p=>Object.assign({initial:initialOf(p.name),source:"fundador"},p)); }
+  res.status(200).json({ updatedAt:new Date().toISOString(), source, error, people });
 };
-
-// Exportado para pruebas locales
-module.exports.buildProfiles = buildProfiles;
-module.exports.parseCSV = parseCSV;
-module.exports.splitCats = splitCats;
+module.exports.buildPeople=buildPeople;
