@@ -45,19 +45,20 @@ function mapCols(header){
     bio:f(h=>h.includes("bio")||h.includes("perfil")), ciudad:f(h=>h.includes("residencia")||h.includes("lugar")),
     ofreceTxt:f(h=>h.includes("ofrecer")||h.includes("puedes dar")),
     ofreceCats:f(h=>h.includes("categoria")&&h.includes("puedes")),
+    recibeTxt:f(h=>h.includes("recibir")||h.includes("ayudarte")||h.includes("necesitas ahora")),
     recibeCats:f(h=>h.includes("categoria")&&(h.includes("necesitas")||h.includes("recibir")))
   };
 }
 
 const SEEDS = [
-  {id:"paul",name:"Paul",city:"Berlín",isFounder:true,accent:"movilidad",offers:["movilidad","comida","idioma","vivienda","empleo"],offerDetail:"Construcción, ingeniería civil, licencia y carro, cocina, alemán",needs:["comida"],bio:"Construcción de casas, ingeniería civil y trabajo físico.",email:"schwarzpail.paul@googlemail.com"},
-  {id:"marita",name:"Marita",city:"Berlín",isFounder:true,accent:"jardin",offers:["jardin","idioma","movilidad"],offerDetail:"Jardín, gramática de alemán y español, traducción, conducción",needs:["tecnologia"],bio:"Jardín, traducción y gramática de alemán y español.",email:"mradajewshi@googlemail.com"},
-  {id:"marilyn",name:"Marilyn",city:"Berlín",isFounder:true,accent:"comunidad",offers:["comunidad","comida","media","educacion","movilidad"],offerDetail:"Conexiones y contactos, arte terapia, arepas, karaoke, radio digital",needs:["media","movilidad","jardin","educacion"],bio:"Conexiones de comunidades y artistas, arte terapia y radio digital.",email:"marilyn@masterpeace.org"},
-  {id:"rebeca",name:"Rebeca",city:"Berlín",isFounder:true,accent:"media",offers:["media","comida","ropa","tramites"],offerDetail:"Videos y edición, comida de Brasil, croché, asesoría en burocracia",needs:["empleo","tramites","idioma"],bio:"Videos y edición, comida de Brasil, croché y burocracia.",email:"Rebecca.desantana@gmail.com"},
-  {id:"dolly",name:"Dolly",city:"Berlín",isFounder:true,accent:"comida",offers:["comida","idioma","legal","comunidad"],offerDetail:"Sopita y café, libros, vida alemana, visas, organizaciones",needs:["comunidad","media"],bio:"Sopita y café, vida alemana, visas y organizaciones.",email:"berlin@casalatinoamericana.de"},
-  {id:"magali",name:"Magali",city:"Berlín",isFounder:true,accent:"comunidad",offers:["comunidad"],offerDetail:"Paz y no violencia, autoconocimiento, nuevo humanismo",needs:["tecnologia","movilidad","comunidad"],bio:"Paz y no violencia, autoconocimiento y nuevo humanismo.",email:"maganavarrete8@gmail.com"},
-  {id:"melisa",name:"Melisa",city:"Berlín",isFounder:true,accent:"salud",offers:["salud","comunidad"],offerDetail:"Contacto en redes de médicos, comunidad latina",needs:["salud","comunidad"],bio:"Contacto en redes de médicos y comunidad latina.",email:"Alisongomezm01@gmail.com"},
-  {id:"alfonso",name:"Alfonso",city:"Berlín",isFounder:true,accent:"comunidad",offers:["comunidad","comida","jardin"],offerDetail:"Procesos de organización, cocina, medio ambiente",needs:["idioma","salud"],bio:"Procesos de organización, cocina y medio ambiente.",email:"Intercambiojusto@yahoo.es"}
+  {id:"paul",name:"Paul",city:"Berlín",isFounder:true,accent:"movilidad",offers:["movilidad","comida","idioma","vivienda","empleo"],offerDetail:"Construcción, ingeniería civil, licencia y carro, cocina, alemán",needs:["comida"],needDetail:"Comida y recetas para el día a día.",bio:"Construcción de casas, ingeniería civil y trabajo físico.",email:"schwarzpail.paul@googlemail.com"},
+  {id:"marita",name:"Marita",city:"Berlín",isFounder:true,accent:"jardin",offers:["jardin","idioma","movilidad"],offerDetail:"Jardín, gramática de alemán y español, traducción, conducción",needs:["tecnologia"],needDetail:"Aprender computación e inteligencia artificial, y ayuda con tecnología.",bio:"Jardín, traducción y gramática de alemán y español.",email:"mradajewshi@googlemail.com"},
+  {id:"marilyn",name:"Marilyn",city:"Berlín",isFounder:true,accent:"comunidad",offers:["comunidad","comida","media","educacion","movilidad"],offerDetail:"Conexiones y contactos, arte terapia, arepas, karaoke, radio digital",needs:["media","movilidad","jardin","educacion"],needDetail:"Logística, fotografía y video, comunicación y medios, un carro o alguien que maneje, talleres de arte y jardinería.",bio:"Conexiones de comunidades y artistas, arte terapia y radio digital.",email:"marilyn@masterpeace.org"},
+  {id:"rebeca",name:"Rebeca",city:"Berlín",isFounder:true,accent:"media",offers:["media","comida","ropa","tramites"],offerDetail:"Videos y edición, comida de Brasil, croché, asesoría en burocracia",needs:["empleo","tramites","idioma"],needDetail:"Cómo buscar trabajo y armar portafolio, trámites burocráticos, tema financiero, postular a la ayuda social y alemán.",bio:"Videos y edición, comida de Brasil, croché y burocracia.",email:"Rebecca.desantana@gmail.com"},
+  {id:"dolly",name:"Dolly",city:"Berlín",isFounder:true,accent:"comida",offers:["comida","idioma","legal","comunidad"],offerDetail:"Sopita y café, libros, vida alemana, visas, organizaciones",needs:["comunidad","media"],needDetail:"Participación y creación de comunidad, videos, fotos y medios sociales.",bio:"Sopita y café, vida alemana, visas y organizaciones.",email:"berlin@casalatinoamericana.de"},
+  {id:"magali",name:"Magali",city:"Berlín",isFounder:true,accent:"comunidad",offers:["comunidad"],offerDetail:"Paz y no violencia, autoconocimiento, nuevo humanismo",needs:["tecnologia","movilidad","comunidad"],needDetail:"Conocer nuevas redes y tecnologías, voluntarios y choferes.",bio:"Paz y no violencia, autoconocimiento y nuevo humanismo.",email:"maganavarrete8@gmail.com"},
+  {id:"melisa",name:"Melisa",city:"Berlín",isFounder:true,accent:"salud",offers:["salud","comunidad"],offerDetail:"Contacto en redes de médicos, comunidad latina",needs:["salud","comunidad"],needDetail:"Espacios de dispersión y salud para la comunidad latina.",bio:"Contacto en redes de médicos y comunidad latina.",email:"Alisongomezm01@gmail.com"},
+  {id:"alfonso",name:"Alfonso",city:"Berlín",isFounder:true,accent:"comunidad",offers:["comunidad","comida","jardin"],offerDetail:"Procesos de organización, cocina, medio ambiente",needs:["idioma","salud"],needDetail:"Alemán y asesoría médica.",bio:"Procesos de organización, cocina y medio ambiente.",email:"Intercambiojusto@yahoo.es"}
 ];
 
 function buildPeople(csv){
@@ -71,7 +72,7 @@ function buildPeople(csv){
       const offers=splitCats(g(col.ofreceCats)); const needs=splitCats(g(col.recibeCats));
       form.push({ id:slug(name)+"-"+r, name, city:g(col.ciudad)||"Berlín", isFounder:false,
         accent: offers[0]||"comunidad", offers, offerDetail:g(col.ofreceTxt),
-        needs, bio:g(col.bio), email:g(col.correo), initial:initialOf(name), source:"form" });
+        needs, needDetail:g(col.recibeTxt), bio:g(col.bio), email:g(col.correo), initial:initialOf(name), source:"form" });
     }
   }
   const map=new Map();
