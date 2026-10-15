@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRightIcon, PlusIcon } from 'lucide-react';
 
-const HERO_IMAGE = "/d38f5a43-1cca-43b8-a488-ca3f49dcae2b.jpg";
+const HERO_IMAGE = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/WhatsApp%20Image%202026-09-10%20at%202.43.30%20PM%20%286%29-YeEm5ytzQ2AyM945ct6kIg6dLiAfhB.jpeg";
 
 type CommunityHeroProps = {
   peopleCount: number;
