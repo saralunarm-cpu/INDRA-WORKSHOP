@@ -12,7 +12,8 @@ const LABEL2ID = {
   "salud": "salud", "tramites": "tramites", "tecnologia": "tecnologia",
   "vivienda y alojamiento": "vivienda", "empleo y trabajo": "empleo",
   "educacion y clases": "educacion", "familia y ninez": "familia",
-  "ropa y objetos": "ropa", "legal y migracion": "legal"
+  "ropa y objetos": "ropa", "legal y migracion": "legal",
+  "arte y cultura": "arte"
 };
 function norm(s){return (s==null?"":String(s)).normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/\s+/g," ").trim();}
 function toId(label){ return LABEL2ID[norm(label)] || null; }
