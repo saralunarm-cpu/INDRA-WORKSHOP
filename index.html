@@ -647,6 +647,13 @@ button.rc-who:hover .rc-wn{text-decoration:underline;text-underline-offset:3px;}
 .rgc svg{width:16px;height:16px;}
 .rgppl{gap:7px;font-size:.88rem;}
 .rgppl svg{width:17px;height:17px;flex:none;}
+/* ---- tone by mode: ask = purple, give = green ---- */
+.reqlist.tone-ask .rgc,.reqlist.tone-ask .rc-cat{color:var(--askText)!important;}
+.reqlist.tone-give .rgc,.reqlist.tone-give .rc-cat{color:var(--giveText)!important;}
+.reqlist.tone-ask .rc-badge,.reqlist.tone-ask .rc-act{color:var(--askText);background:var(--askTint);}
+.reqlist.tone-give .rc-badge,.reqlist.tone-give .rc-act{color:var(--giveText);background:var(--giveTint);}
+.reqlist.tone-ask .rc-badge.done,.reqlist.tone-give .rc-badge.done{color:var(--brandStrong);background:var(--brandTint);}
+.reqlist.tone-ask .rc-badge.off,.reqlist.tone-give .rc-badge.off{color:var(--inkSoft);background:var(--surfaceAlt);}
 </style></head><body><nav class="nav"><div class="navin">
  <a class="nbrand" href="#home">__DIAMOND__<b>Indra</b></a>
  <div class="nlinks" id="nlinks"></div>
@@ -886,7 +893,7 @@ function groupedRequests(list){var off=MODE==='ofrecen';if(!off&&SORT!=='cat')re
  }).filter(Boolean));
 }
 function renderRequests(){var off=MODE==='ofrecen';var list=filteredRequests();var reqs=allRequests();var offs=allOffers();var all=off?offs:reqs;
- var wrap=document.getElementById('reqlist');if(wrap)wrap.innerHTML=list.length?groupedRequests(list):emptyHTML('req');renderFilters('req');
+ var wrap=document.getElementById('reqlist');if(wrap){wrap.className='reqlist '+(off?'tone-give':'tone-ask');wrap.innerHTML=list.length?groupedRequests(list):emptyHTML('req');}renderFilters('req');
  var mx=document.getElementById('matches');if(mx)mx.innerHTML=matchesHTML();
  var c=document.getElementById('reqcount');if(c)c.textContent=t(off?'count_off':'count_req').replace('%N',list.length).replace('%M',all.length);
  var h=document.getElementById('reqh');if(h)h.textContent=t(off?'off_title_sec':'req_title');
